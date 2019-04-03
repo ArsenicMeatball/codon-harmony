@@ -118,6 +118,12 @@ def get_parser():
         help="Do not remove alternate start sites.",
     )
     parser.set_defaults(start_sites=True)
+    parser.add_argument(
+        "--one-line-fasta",
+        dest="one_line_fasta",
+        action="store_true",
+        help="Remove splice sites. Use for mammalian hosts.",
+    )
 
     return parser
 
@@ -130,6 +136,7 @@ def _harmonize_sequence(
     codon_relative_adativeness,
     rest_enz,
     seq_no=0,
+    one_line_fasta=False,
 ):
     """Convert an amino acid sequence to DNA and optimize it to be synthesizable
     and to match a host codon usage profile.
@@ -154,6 +161,9 @@ def _harmonize_sequence(
             enzymes.
         seq_no (int, optional): The number of the sequence in the input file.
             Used for logging purposes. Defaults to 0.
+        one_line_fasta (bool, optional): Toggles the format of the output DNA
+            sequence. If True, the sequence will be on one line without any
+            line wrapping. Defaults to False.
 
     Returns:
         dict{str, str}: A dictionary with "protein" or "dna" as a key, and the
@@ -161,16 +171,18 @@ def _harmonize_sequence(
         protein sequence is returned if the function cannot satisify the
         harmonization requirements.
     """
+
+    out_format = "fasta-2line" if one_line_fasta else "fasta"
     logger.info(
         "Processing sequence number {}:\n{}".format(
-            seq_no + 1, seq_record.format("fasta")
+            seq_no + 1, seq_record.format(out_format)
         )
     )
 
     dna = seq_record.seq.back_translate()
     logger.detail(
         "Initial DNA sequence:\n{}".format(
-            SeqRecord(dna, id=seq_record.id).format("fasta")
+            SeqRecord(dna, id=seq_record.id).format(out_format)
         )
     )
 
@@ -241,10 +253,10 @@ def _harmonize_sequence(
     if isinstance(best_dna, str):
         logger.warning(
             "Unable to create suitable DNA sequence for input sequence {}.\n{}".format(
-                seq_no + 1, seq_record.format("fasta")
+                seq_no + 1, seq_record.format(out_format)
             )
         )
-        return {"protein": seq_record.format("fasta")}
+        return {"protein": seq_record.format(out_format)}
 
     if args.splice_sites:
         logger.output("Detecting and removing splice sites before outputting.")
@@ -272,7 +284,7 @@ def _harmonize_sequence(
         )
     )
 
-    best_dna_fasta = best_dna.format("fasta")
+    best_dna_fasta = best_dna.format(out_format)
     logger.output(
         "The designed gene's CAI is: {:.2f}\n{}".format(best_cai, best_dna_fasta)
     )
@@ -317,6 +329,7 @@ def main(argv=None):
                 codon_relative_adativeness,
                 rest_enz,
                 seq_no,
+                args.one_line_fasta,
             )
 
     with multiprocessing.Pool() as pool:
