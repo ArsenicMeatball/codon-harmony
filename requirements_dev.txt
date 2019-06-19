@@ -2,7 +2,7 @@ pip==19.0.3
 bumpversion==0.5.3
 wheel==0.33.1
 tox==3.7.0
-Sphinx==1.8.4
+Sphinx==2.1.2
 sphinx-argparse==0.2.5
 coverage==4.5.2
 codecov==2.0.15
