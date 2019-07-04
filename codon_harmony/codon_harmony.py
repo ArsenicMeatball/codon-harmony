@@ -128,6 +128,30 @@ def get_parser():
     return parser
 
 
+
+
+class AAForm:
+    def __init__(self,argv):
+        self.host = argv['host']
+        self.host_threshold= argv['host_threshold']
+        #gc_richness_threshold= argv['gc_richness_threshold']
+        #gc_richness_chunk_size= argv['gc_richness_chunk_size']
+        self.local_homopolymer_threshold= argv['local_homopolymer_threshold']
+        self.cycles= argv['cycles']
+        self.inner_cycles= argv['inner_cycles']
+        self.max_relax= argv['max_relax']
+        self.restriction_enzymes= argv['restriction_sites']
+        self.splice_sites= argv['remove_splice_sites']
+        self.start_sites= argv['remove_alternate_start_site']
+        #title= argv['title']
+        self.input= argv['txt']
+        self.local_host_profile= argv['host_profile']
+        self.one_line_fasta=False
+        self.verbose=0
+        self.output="output.fasta"
+    def get_host(self):
+        return self.host
+
 def _harmonize_sequence(
     seq_record,
     args,
@@ -297,7 +321,11 @@ def main(argv=None):
     codon usage frequency. The DNA sequence is then processed to remove
     unwanted features.
     """
-    args = get_parser().parse_args(argv)
+    if(argv == None):
+        args = get_parser().parse_args(argv)
+    else:
+        args = AAForm(argv)
+        
     logging.basicConfig(level=log_levels[args.verbose])
 
     random.seed()
