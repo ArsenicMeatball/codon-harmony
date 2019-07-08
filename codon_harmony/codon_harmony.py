@@ -128,29 +128,40 @@ def get_parser():
     return parser
 
 
-
-
 class AAForm:
-    def __init__(self,argv):
-        self.host = argv['host']
-        self.host_threshold= argv['host_threshold']
-        #gc_richness_threshold= argv['gc_richness_threshold']
-        #gc_richness_chunk_size= argv['gc_richness_chunk_size']
-        self.local_homopolymer_threshold= argv['local_homopolymer_threshold']
-        self.cycles= argv['cycles']
-        self.inner_cycles= argv['inner_cycles']
-        self.max_relax= argv['max_relax']
-        self.restriction_enzymes= argv['restriction_sites']
-        self.splice_sites= argv['remove_splice_sites']
-        self.start_sites= argv['remove_alternate_start_site']
-        #title= argv['title']
-        self.input= argv['txt']
-        self.local_host_profile= argv['host_profile']
-        self.one_line_fasta=False
-        self.verbose=0
-        self.output="output.fasta"
+    def __init__(self, argv):
+        if argv.get("input") is not None:
+            self.input = argv.get('input')
+        if argv.get("host") is None:
+            self.host = "413997"
+        if argv.get("host_threshold") is None:
+            self.host_threshold = 0.1
+        if argv.get("local_homopolymer_threshold") is None:
+            self.local_homopolymer_threshold = 4
+        if argv.get("cycles") is None:
+            self.cycles = 10
+        if argv.get("inner_cycles") is None:
+            self.inner_cycles = 10
+        if argv.get("max_relax") is None:
+            self.max_relax = "0.1"
+        if argv.get("restriction_sites") is None:
+            self.restriction_enzymes = "NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split()
+        if argv.get("remove_splice_sites") is None:
+            self.splice_sites = False
+        if argv.get("remove_alternate_start_site") is None:
+            self.start_sites = False
+        if argv.get("host_profile") is None:
+            self.local_host_profile = None
+        # gc_richness_threshold = argv['gc_richness_threshold']
+        # gc_richness_chunk_size = argv['gc_richness_chunk_size']
+        # title = argv['title']
+        self.verbose = 0
+        self.one_line_fasta = False
+        self.output = "output.fasta"
+    
     def get_host(self):
         return self.host
+
 
 def _harmonize_sequence(
     seq_record,
@@ -321,11 +332,11 @@ def main(argv=None):
     codon usage frequency. The DNA sequence is then processed to remove
     unwanted features.
     """
-    if(argv == None):
-        args = get_parser().parse_args(argv)
+    if(argv and (isinstance(argv, AAForm))):
+        args = argv
     else:
-        args = AAForm(argv)
-        
+        args = get_parser().parse_args(argv)
+
     logging.basicConfig(level=log_levels[args.verbose])
 
     random.seed()
