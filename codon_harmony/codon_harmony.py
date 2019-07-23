@@ -291,13 +291,72 @@ def _harmonize_sequence(
     return {"dna": best_dna_fasta}
 
 
+
+class AAForm:
+    '''
+    Class to take in arguments
+    (dictionary with at least inputfile specified) 
+    not from command-line,
+    used by runner.py(the_dict) in scripts
+    '''
+    def __init__(self, argv):
+        self.host = "413997"
+        self.host_threshold = 0.1
+        self.local_homopolymer_threshold = 4
+        self.cycles = 10
+        self.inner_cycles = 10
+        self.max_relax = 0.1
+        resties = "NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split()
+        self.restriction_enzymes = resties
+        self.splice_sites = False
+        self.start_sites = False
+        self.local_host_profile = None
+        self.verbose = 1
+        self.one_line_fasta = False
+        self.output = "output.fasta"
+        self.run = True
+        if argv.get("input"):
+            self.input = argv.get('input')
+        if argv.get("host") is not None:
+            self.host = argv.get('host')
+        if argv.get("host_threshold") is not None:
+            self.host_threshold = float(argv.get('host_threshold'))
+        if argv.get("local_homopolymer_threshold") is not None:
+            resties = int(argv.get('local_homopolymer_threshold'))
+            self.local_homopolymer_threshold = resties
+        if argv.get("cycles") is not None:
+            self.cycles = int(argv.get('cycles'))
+        if argv.get("inner_cycles") is not None:
+            self.inner_cycles = int(argv.get('inner_cycles'))
+        if argv.get("max_relax") is not None:
+            self.max_relax = float(argv.get('max_relax'))
+        if argv.get("restriction_sites") is not None:
+            self.restriction_enzymes = argv.get('restriction_sites').split()
+        if argv.get("remove_splice_sites") is not None:
+            self.splice_sites = argv.get('remove_splice_sites')
+        if argv.get("remove_alternate_start_site") is not None:
+            self.start_sites = argv.get('remove_alternate_start_site')
+        if argv.get("host_profile") is not None:
+            self.local_host_profile = argv.get('host_profile')
+        # gc_richness_threshold = argv['gc_richness_threshold']
+        # gc_richness_chunk_size = argv['gc_richness_chunk_size']
+        # title = argv['title']
+
+    def get_host(self):
+        return self.host
+
+
 def main(argv=None):
     """Read in a fasta-formatted file containing amino acid sequences and
     reverse translate each of them in accordance with a specified host's
     codon usage frequency. The DNA sequence is then processed to remove
     unwanted features.
     """
-    args = get_parser().parse_args(argv)
+    if argv and isinstance(argv, AAForm) and argv.get("input"):
+        args = AAForm(argv)
+    else:
+        args = get_parser().parse_args(argv)
+
     logging.basicConfig(level=log_levels[args.verbose])
 
     random.seed()
