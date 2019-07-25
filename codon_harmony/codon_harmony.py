@@ -291,13 +291,10 @@ def _harmonize_sequence(
     return {"dna": best_dna_fasta}
 
 
-
 class AAForm:
     '''
-    Class to take in arguments
-    (dictionary with at least inputfile specified) 
-    not from command-line,
-    used by runner.py(the_dict) in scripts
+    Class to take in arguments not from command-line,
+    used by runner.py
     '''
     def __init__(self, argv):
         self.host = "413997"
@@ -313,7 +310,7 @@ class AAForm:
         self.local_host_profile = None
         self.verbose = 1
         self.one_line_fasta = False
-        self.output = "output.fasta"
+        self.output = "out.fasta"
         self.run = True
         if argv.get("input"):
             self.input = argv.get('input')
@@ -342,9 +339,6 @@ class AAForm:
         # gc_richness_chunk_size = argv['gc_richness_chunk_size']
         # title = argv['title']
 
-    def get_host(self):
-        return self.host
-
 
 def main(argv=None):
     """Read in a fasta-formatted file containing amino acid sequences and
@@ -352,7 +346,7 @@ def main(argv=None):
     codon usage frequency. The DNA sequence is then processed to remove
     unwanted features.
     """
-    if argv and isinstance(argv, AAForm) and argv.get("input"):
+    if argv and isinstance(argv, dict) and argv.get("input"):
         args = AAForm(argv)
     else:
         args = get_parser().parse_args(argv)
