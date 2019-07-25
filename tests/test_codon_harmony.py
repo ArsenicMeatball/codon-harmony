@@ -7,7 +7,7 @@
 import unittest
 
 from codon_harmony import codon_harmony
-
+from codon_harmony.codon_harmony import AAForm
 
 class TestCodon_tools(unittest.TestCase):
     """Tests for `codon_tools` package."""
@@ -47,6 +47,68 @@ class TestCodon_tools(unittest.TestCase):
             "BamHI",
         ]
         assert parsed_args.verbose == 0
+        assert parsed_args.splice_sites
+        assert parsed_args.start_sites
+
+    def test_args_dict(self):
+        """Test arguments passed as a dictionary
+        Test for near empty dict"""
+        test_dict = {}
+        test_dict["input"]="misc/INPUT_LIST.fasta"
+        parsed_args = AAForm(test_dict)
+        assert parsed_args.input == "misc/INPUT_LIST.fasta"
+        assert parsed_args.output == "out.fasta"
+        assert parsed_args.cycles == 10
+        assert parsed_args.host == "413997"
+        assert parsed_args.host_threshold == 0.1
+        assert parsed_args.local_host_profile is None
+        assert parsed_args.inner_cycles == 10
+        assert parsed_args.local_homopolymer_threshold == 4
+        assert parsed_args.max_relax == 0.1
+        assert parsed_args.restriction_enzymes == [
+            "NdeI",
+            "XhoI",
+            "HpaI",
+            "PstI",
+            "EcoRV",
+            "NcoI",
+            "BamHI",
+        ]
+        assert parsed_args.verbose == 1
+        assert not parsed_args.splice_sites
+        assert not parsed_args.start_sites
+
+        """Test for full dict"""
+        test_dict["input"] = "misc/INPUT_LIST.fasta"
+        test_dict["host"] = "413998"
+        test_dict["host_threshold"] = 0.2
+        test_dict["local_homopolymer_threshold"] = 5
+        test_dict["cycles"] = 12
+        test_dict["inner_cycles"] = 12
+        test_dict["max_relax"] = 0.2
+        test_dict["restriction_sites"] = "NdeI XhoI HpaI PstI EcoRV NcoI"
+        test_dict["remove_splice_sites"] = True
+        test_dict["remove_alternate_start_site"] = True
+        test_dict["host_profile"] = None
+        parsed_args = AAForm(test_dict)
+        assert parsed_args.input == "misc/INPUT_LIST.fasta"
+        assert parsed_args.output == "out.fasta"
+        assert parsed_args.cycles == 12
+        assert parsed_args.host == "413998"
+        assert parsed_args.host_threshold == 0.2
+        assert parsed_args.local_host_profile is None
+        assert parsed_args.inner_cycles == 12
+        assert parsed_args.local_homopolymer_threshold == 5
+        assert parsed_args.max_relax == 0.2
+        assert parsed_args.restriction_enzymes == [
+            "NdeI",
+            "XhoI",
+            "HpaI",
+            "PstI",
+            "EcoRV",
+            "NcoI",
+        ]
+        assert parsed_args.verbose == 1
         assert parsed_args.splice_sites
         assert parsed_args.start_sites
 
