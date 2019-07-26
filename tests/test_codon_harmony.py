@@ -7,7 +7,8 @@
 import unittest
 
 from codon_harmony import codon_harmony
-from codon_harmony.codon_harmony import AAForm
+from codon_harmony.codon_harmony import DictAsArg
+
 
 class TestCodon_tools(unittest.TestCase):
     """Tests for `codon_tools` package."""
@@ -33,7 +34,7 @@ class TestCodon_tools(unittest.TestCase):
         assert parsed_args.cycles == 10
         assert parsed_args.host == "413997"
         assert parsed_args.host_threshold == 0.1
-        assert parsed_args.local_host_profile == None
+        assert parsed_args.local_host_profile is None
         assert parsed_args.inner_cycles == 10
         assert parsed_args.local_homopolymer_threshold == 4
         assert parsed_args.max_relax == 0.1
@@ -51,12 +52,12 @@ class TestCodon_tools(unittest.TestCase):
         assert parsed_args.start_sites
 
     def test_args_dict(self):
-        """Test arguments passed as a dictionary
-        Test for near empty dict"""
-        test_dict = {}
-        test_dict["input"]="misc/INPUT_LIST.fasta"
-        parsed_args = AAForm(test_dict)
-        assert parsed_args.input == "misc/INPUT_LIST.fasta"
+        """Test dictionary passed as an argument"""
+
+        """Test for default arguments"""
+        test_dict = {"input": "input.fasta"}
+        parsed_args = DictAsArg(test_dict)
+        assert parsed_args.input == "input.fasta"
         assert parsed_args.output == "out.fasta"
         assert parsed_args.cycles == 10
         assert parsed_args.host == "413997"
@@ -72,27 +73,34 @@ class TestCodon_tools(unittest.TestCase):
             "PstI",
             "EcoRV",
             "NcoI",
-            "BamHI",
+            "BamHI"
         ]
-        assert parsed_args.verbose == 1
+        assert parsed_args.verbose == 0
         assert not parsed_args.splice_sites
         assert not parsed_args.start_sites
+        assert not parsed_args.one_line_fasta
+        assert parsed_args.run
 
         """Test for full dict"""
-        test_dict["input"] = "misc/INPUT_LIST.fasta"
-        test_dict["host"] = "413998"
-        test_dict["host_threshold"] = 0.2
-        test_dict["local_homopolymer_threshold"] = 5
-        test_dict["cycles"] = 12
-        test_dict["inner_cycles"] = 12
-        test_dict["max_relax"] = 0.2
-        test_dict["restriction_sites"] = "NdeI XhoI HpaI PstI EcoRV NcoI"
-        test_dict["remove_splice_sites"] = True
-        test_dict["remove_alternate_start_site"] = True
-        test_dict["host_profile"] = None
-        parsed_args = AAForm(test_dict)
+        test_dict = {
+            "input": "misc/INPUT_LIST.fasta",
+            "host": "413998",
+            "host_threshold": 0.2,
+            "local_homopolymer_threshold": 5,
+            "cycles": 12,
+            "inner_cycles": 12,
+            "max_relax": 0.2,
+            "restriction_enzymes": "NdeI XhoI HpaI PstI EcoRV NcoI".split(),
+            "splice_sites": True,
+            "start_sites": True,
+            "verbose": 1,
+            "one_line_fasta": True,
+            "output": "output.fasta",
+            "run": False,
+        }
+        parsed_args = DictAsArg(test_dict)
         assert parsed_args.input == "misc/INPUT_LIST.fasta"
-        assert parsed_args.output == "out.fasta"
+        assert parsed_args.output == "output.fasta"
         assert parsed_args.cycles == 12
         assert parsed_args.host == "413998"
         assert parsed_args.host_threshold == 0.2
@@ -106,11 +114,16 @@ class TestCodon_tools(unittest.TestCase):
             "HpaI",
             "PstI",
             "EcoRV",
-            "NcoI",
+            "NcoI"
         ]
         assert parsed_args.verbose == 1
         assert parsed_args.splice_sites
         assert parsed_args.start_sites
+        assert parsed_args.one_line_fasta
+        assert not parsed_args.run
+
+        """Integrity test - dict passing through the code"""
+        codon_harmony.main({"input": "misc/INPUT_LIST.fasta"})
 
     def test_main(self):
         """Test `codon_harmony` main function"""
