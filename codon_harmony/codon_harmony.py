@@ -9,6 +9,7 @@ from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqUtils import GC
+from multiprocessing import Pool
 
 from .util import codon_use, logging, log_levels, seq_opt
 from .data import GC_content, RibosomeBindingSites, RestrictionEnzymes
@@ -128,51 +129,72 @@ def get_parser():
     return parser
 
 
+def _input_prep(args,codon_use_table, host_profile, codon_relative_adativeness,rest_enz):
+        """Read in all supplied sequences and prepare args for the
+        ``_harmonize_sequence`` function
+        """
+        for seq_no, record in enumerate(
+            SeqIO.parse(args.input, "fasta", IUPAC.protein)
+        ):
+            yield (
+                record,
+                args,
+                codon_use_table,
+                host_profile,
+                codon_relative_adativeness,
+                rest_enz,
+                seq_no,
+                args.one_line_fasta,
+            )
+
+
 class AAForm:
     def __init__(self, argv):
-        if argv.get("input") is not None:
+        self.host = "413997"
+        self.host_threshold = 0.1
+        self.local_homopolymer_threshold = 4
+        self.cycles = 10
+        self.inner_cycles = 10
+        self.max_relax = "0.1"
+        self.restriction_enzymes = "NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split()
+        self.splice_sites = False
+        self.start_sites = False
+        self.local_host_profile = None
+        self.verbose = 1
+        self.one_line_fasta = False
+        self.output = "output.fasta"
+        self.run = True
+        if argv.get("input"):
             self.input = argv.get('input')
-        if argv.get("host") is None:
-            self.host = "413997"
-        if argv.get("host_threshold") is None:
-            self.host_threshold = 0.1
-        if argv.get("local_homopolymer_threshold") is None:
-            self.local_homopolymer_threshold = 4
-        if argv.get("cycles") is None:
-            self.cycles = 10
-        if argv.get("inner_cycles") is None:
-            self.inner_cycles = 10
-        if argv.get("max_relax") is None:
-            self.max_relax = "0.1"
-        if argv.get("restriction_sites") is None:
-            self.restriction_enzymes = "NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split()
-        if argv.get("remove_splice_sites") is None:
-            self.splice_sites = False
-        if argv.get("remove_alternate_start_site") is None:
-            self.start_sites = False
-        if argv.get("host_profile") is None:
-            self.local_host_profile = None
+        if argv.get("host") is not None:
+            self.host =  argv.get('host')
+        if argv.get("host_threshold") is not None:
+            self.host_threshold =  float(argv.get('host_threshold'))
+        if argv.get("local_homopolymer_threshold") is not None:
+            self.local_homopolymer_threshold =  int(argv.get('local_homopolymer_threshold'))
+        if argv.get("cycles") is not None:
+            self.cycles =  int(argv.get('cycles'))
+        if argv.get("inner_cycles") is not None:
+            self.inner_cycles =  int(argv.get('inner_cycles'))
+        if argv.get("max_relax") is not None:
+            self.max_relax =  float(argv.get('max_relax'))
+        if argv.get("restriction_sites") is not None:
+            self.restriction_enzymes =  argv.get('restriction_sites').split()
+        if argv.get("remove_splice_sites") is not None:
+            self.splice_sites = argv.get('remove_splice_sites')
+        if argv.get("remove_alternate_start_site") is not None:
+            self.start_sites = argv.get('remove_alternate_start_site')
+        if argv.get("host_profile") is not None:
+            self.local_host_profile = argv.get('host_profile')
         # gc_richness_threshold = argv['gc_richness_threshold']
         # gc_richness_chunk_size = argv['gc_richness_chunk_size']
         # title = argv['title']
-        self.verbose = 0
-        self.one_line_fasta = False
-        self.output = "output.fasta"
-    
+        
     def get_host(self):
         return self.host
 
 
-def _harmonize_sequence(
-    seq_record,
-    args,
-    codon_use_table,
-    host_profile,
-    codon_relative_adativeness,
-    rest_enz,
-    seq_no=0,
-    one_line_fasta=False,
-):
+def _harmonize_sequence(seq_record,args,codon_use_table,host_profile,codon_relative_adativeness,rest_enz,seq_no=0,one_line_fasta=False):
     """Convert an amino acid sequence to DNA and optimize it to be synthesizable
     and to match a host codon usage profile.
 
@@ -206,7 +228,7 @@ def _harmonize_sequence(
         protein sequence is returned if the function cannot satisify the
         harmonization requirements.
     """
-
+    logger.info('HARMON')
     out_format = "fasta-2line" if one_line_fasta else "fasta"
     logger.info(
         "Processing sequence number {}:\n{}".format(
@@ -327,6 +349,7 @@ def _harmonize_sequence(
 
 
 def main(argv=None):
+    
     """Read in a fasta-formatted file containing amino acid sequences and
     reverse translate each of them in accordance with a specified host's
     codon usage frequency. The DNA sequence is then processed to remove
@@ -349,42 +372,37 @@ def main(argv=None):
     codon_use_table, host_profile, codon_relative_adativeness = codon_use.host_codon_usage(
         args.host, args.host_threshold, args.local_host_profile
     )
-
+    
     # initialize the restriction sites of interest
     rest_enz = RestrictionEnzymes(args.restriction_enzymes)
+    
+    # Multithread - JD
+    input_iter = _input_prep(args,codon_use_table, host_profile, codon_relative_adativeness,rest_enz)
+    N = multiprocessing.cpu_count() * 3
+    pool = Pool(1)
+    while True:
+        seqs = pool.starmap(_harmonize_sequence, itertools.islice(input_iter, N))
+        if seqs:
+            out_seqs.extend(seqs)
+        else:
+            break
 
-    def _input_prep():
-        """Read in all supplied sequences and prepare args for the
-        ``_harmonize_sequence`` function
-        """
-        for seq_no, record in enumerate(
-            SeqIO.parse(args.input, "fasta", IUPAC.protein)
-        ):
-            yield (
-                record,
-                args,
-                codon_use_table,
-                host_profile,
-                codon_relative_adativeness,
-                rest_enz,
-                seq_no,
-                args.one_line_fasta,
-            )
-
-    with multiprocessing.Pool() as pool:
-        input_iter = _input_prep()
-        # split input into chunks no larger than 3 x Ncpu
-        N = multiprocessing.cpu_count() * 3
-
-        # in principle, the number of sequences are in the fasta file is unknown, so
-        # go through it with an islice and break out when there are no more sequences
-        while True:
-            seqs = pool.starmap(_harmonize_sequence, itertools.islice(input_iter, N))
-            if seqs:
-                out_seqs.extend(seqs)
-            else:
-                break
-
+    '''
+    if __name__ == 'codon_harmony.codon_harmony' and args.run:
+        args.run = False
+        with multiprocessing.Pool(4) as pool:
+            input_iter = _input_prep()
+            # split input into chunks no larger than 3 x Ncpu
+            N = multiprocessing.cpu_count() * 3
+            # in principle, the number of sequences are in the fasta file is unknown, so
+            # go through it with an islice and break out when there are no more sequences
+            while True:
+                seqs = pool.starmap(_harmonize_sequence, itertools.islice(input_iter, N))
+                if seqs:
+                    out_seqs.extend(seqs)
+                else:
+                    break
+    '''
     dna_seqs = "".join([seq["dna"] for seq in out_seqs if "dna" in seq])
     failed_seqs = "".join([seq["protein"] for seq in out_seqs if "protein" in seq])
 

@@ -75,7 +75,6 @@ def calc_codon_relative_adaptiveness(codons_count):
     """
     logger.info("Calculating relative adaptiveness of codon use")
     codons_rel_adapt = CodonUsage.CodonsDict.copy()
-
     # loop through all amino acids
     for _, synonymous_codons in CodonUsage.SynonymousCodons.items():
         # get the number of occurrences of the most frequently used codon
@@ -88,10 +87,8 @@ def calc_codon_relative_adaptiveness(codons_count):
         codons_rel_adapt.update(
             {codon: codons_count[codon] / X_max for codon in synonymous_codons}
         )
-
     codon_adaptation_index = CodonUsage.CodonAdaptationIndex()
     codon_adaptation_index.set_cai_index(codons_rel_adapt)
-
     return codon_adaptation_index
 
 
@@ -173,12 +170,10 @@ def host_codon_usage(host, threshold=0.10, table_path=None):
     """
     host_profile = process_host_table(host, threshold, table_path)
     cra = calc_codon_relative_adaptiveness(host_profile)
-
     codon_use_by_aa = {}
     for AA, synonymous_codons in CodonUsage.SynonymousCodons.items():
         codon_use_by_aa[AA] = [
             synonymous_codons,
             [host_profile[codon] for codon in synonymous_codons],
         ]
-
     return codon_use_by_aa, host_profile, cra
