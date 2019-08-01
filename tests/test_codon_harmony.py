@@ -7,7 +7,7 @@
 import unittest
 
 from codon_harmony import codon_harmony
-from codon_harmony.codon_harmony import DictAsArg
+from codon_harmony.dict_as_arg import DictAsArg
 
 
 class TestCodon_tools(unittest.TestCase):
@@ -56,7 +56,7 @@ class TestCodon_tools(unittest.TestCase):
 
         """Test for default arguments"""
         test_dict = {"input": "input.fasta"}
-        parsed_args = DictAsArg(test_dict)
+        parsed_args = DictAsArg().from_dict(test_dict)
         assert parsed_args.input == "input.fasta"
         assert parsed_args.output == "out.fasta"
         assert parsed_args.cycles == 10
@@ -98,7 +98,7 @@ class TestCodon_tools(unittest.TestCase):
             "output": "output.fasta",
             "run": False,
         }
-        parsed_args = DictAsArg(test_dict)
+        parsed_args = DictAsArg().from_dict(test_dict)
         assert parsed_args.input == "misc/INPUT_LIST.fasta"
         assert parsed_args.output == "output.fasta"
         assert parsed_args.cycles == 12

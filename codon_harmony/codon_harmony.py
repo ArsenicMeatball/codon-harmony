@@ -12,9 +12,10 @@ from Bio.SeqUtils import GC
 
 from .util import codon_use, logging, log_levels, seq_opt
 from .data import GC_content, RibosomeBindingSites, RestrictionEnzymes
+from . import dict_as_arg
+from dict_as_arg import DictAsArg 
 
 logger = logging.getLogger(__name__)
-
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -291,36 +292,6 @@ def _harmonize_sequence(
     return {"dna": best_dna_fasta}
 
 
-class DictAsArg:
-    """
-    allows users to pass a dictionary as an argument
-    example of usage
-    the_dictionary = {'host': 'my_host_id', 'verbose': 2}
-    codon_harmony.runner(the_dictionary)
-    """
-    def __init__(self, dictionary):
-        self.input: str = "input.fasta"
-        self.host: str = "413997"
-        self.host_threshold: float = 0.1
-        self.cycles: int = 10
-        self.local_homopolymer_threshold: int = 4
-        self.inner_cycles: int = 10
-        self.max_relax: float = 0.1
-        longline = "NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split()
-        self.restriction_enzymes: [str] = longline
-        self.splice_sites: bool = False
-        self.start_sites: bool = False
-        self.local_host_profile: str = None
-        self.verbose: int = 0
-        self.one_line_fasta: bool = False
-        self.output: str = "out.fasta"
-        self.run: bool = True
-        # gc_richness_threshold = argv['gc_richness_threshold']
-        # gc_richness_chunk_size = argv['gc_richness_chunk_size']
-        for key in dictionary:
-            setattr(self, key, dictionary[key])
-
-
 def main(argv=None):
     """Read in a fasta-formatted file containing amino acid sequences and
     reverse translate each of them in accordance with a specified host's
@@ -328,7 +299,7 @@ def main(argv=None):
     unwanted features.
     """
     if argv and isinstance(argv, dict) and argv.get("input"):
-        args = DictAsArg(argv)
+        args = DictAsArg().from_dict(argv)
     else:
         args = get_parser().parse_args(argv)
 
