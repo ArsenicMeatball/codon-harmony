@@ -1,5 +1,5 @@
-import dataclasses
 from dataclasses import dataclass, field
+
 
 @dataclass
 class DictAsArg:
@@ -21,7 +21,7 @@ class DictAsArg:
     splice_sites: bool = False
     start_sites: bool = False
     local_host_profile: str = None
-    verbose: int = 1
+    verbose: int = 0
     one_line_fasta: bool = False
     output: str = "out.fasta"
     run: bool = True
@@ -29,5 +29,7 @@ class DictAsArg:
     @classmethod
     def from_dict(cls, dictionary):
         inst = cls()
-        inst.__dict__.update({k: v for k, v in dictionary.items() if k in inst.__dict__})
+        inst.__dict__.update(
+            {k: v for k, v in dictionary.items() if k in inst.__dict__}
+        )
         return inst
