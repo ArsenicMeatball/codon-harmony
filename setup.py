@@ -11,7 +11,7 @@ with open("README.rst") as readme_file:
 with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
-requirements = ["biopython>=1.73", "python_codon_tables>=0.1.8"]
+requirements = ["biopython>=1.73", "python_codon_tables>=0.1.8", 'Bio']
 
 setup_requirements = []
 
