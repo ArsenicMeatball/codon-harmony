@@ -12,11 +12,11 @@ def generate_initial_population(pop_size=10):
     for idx in range(pop_size):
         new_seq = mutable_seq
         new_seq = new_seq.toseq()
-        mutants[mutate_sequence(new_seq, idx)]= 0
+        mutants[mutate_sequence(new_seq)] = 0
     return mutants
 
 
-def mutate_sequence(sequence, mutation_probability=0.0005, offset=0):
+def mutate_sequence(sequence, offset=0, mutation_probability=0.001):
     """
     Takes a single sequence and gives it a random number of mutations.
     :param sequence:
@@ -28,11 +28,10 @@ def mutate_sequence(sequence, mutation_probability=0.0005, offset=0):
     num_codons = len(mutable_seq)//3
     num_mutations = math.ceil(num_codons * mutation_probability)
     for _ in range(num_mutations):
-        position = random.randrange(0, len(mutable_seq) // 3)
+        position = 3*random.randrange(0, len(mutable_seq) // 3)
         codon_idx = slice(offset + position, (offset + 3) + position)
         new_codon = mutate_codon(mutable_seq[codon_idx])
         mutable_seq[codon_idx] = new_codon
-
     return mutable_seq.toseq()
 
 
@@ -48,11 +47,12 @@ def mutate_codon(codon_in):
     """
     # pick new codon
     codon_out = codon_in
-    while codon_in == codon_out:
+    while hash(id(codon_in)) == hash(id(codon_out)):
         codon_out = "YEE"
-
     return codon_out
 
 
 dna_sequence = Seq.Seq("AATTCCGGATCG", IUPAC.ambiguous_dna)
-print(generate_initial_population())
+population = generate_initial_population()
+print(population)
+

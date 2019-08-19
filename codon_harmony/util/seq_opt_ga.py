@@ -19,7 +19,7 @@ from . import Seq, MutableSeq, codon_use
 logger = logging.getLogger(__name__)
 
 
-def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, generations):
+def the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, generations):
     """Genetic algorithm that creates a population of sequences,
     does checks on them, mutates and repeats until powerrrrr.
 
@@ -35,8 +35,9 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
             mutants.append(_mutate_sequence(new_seq, idx), 0)
         return mutants
 
-    def _mutate_sequence(mutation_probability=0.0005, offset=0):
+    def mutate_sequence(offset=0, mutation_probability=0.0005):
         """
+        TODO: Needs better mtation probability calculation
         Takes a single sequence and gives it a random number of mutations.
         :param sequence:
         :param mutation_probability:
@@ -44,14 +45,13 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
         :return:
         """
         mutable_seq = sequence.tomutable()
-        num_codons = len(mutable_seq)//3
+        num_codons = len(mutable_seq) // 3
         num_mutations = math.ceil(num_codons * mutation_probability)
         for _ in range(num_mutations):
-            position = random.randrange(0, len(mutable_seq, 3))
+            position = 3 * random.randrange(0, len(mutable_seq) // 3)
             codon_idx = slice(offset + position, (offset + 3) + position)
             new_codon = mutate_codon(mutable_seq[codon_idx])
             mutable_seq[codon_idx] = new_codon
-
         return mutable_seq.toseq()
 
     def crossover():
@@ -259,9 +259,9 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
 
         return score
 
-    def _eval_repeats(window_size):
-        """Identify and remove repeating sequences of codons or groups of
-        codons within a DNA sequence.
+    def _eval_repeats(window_size=9):
+        """Identify repeating sequences of nucleotides within a DNA sequence.
+        assign a score based on the number of repeats
 
         Args:
             window_size (int): Size the window (in nucleotides) to examine.
@@ -271,23 +271,13 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
         Returns:
             score: (int) representing the repeats
         """
-        logger.info("Scanning for repeated stretches of {} nucleotides".format(window_size))
-
-        def _mutate_and_keep_looping(mutabl_seq, window, offset):
-            num_mutations = random.randint(1, 2)
-            logger.debug("Mutating {} codons".format(num_mutations))
-            for _ in range(num_mutations):
-                position = random.randrange(0, len(mutabl_seq[window]), 3)
-                codon_idx = slice(offset + position, (offset + 3) + position)
-                new_codon = mutate_codon(mutabl_seq[codon_idx])
-                mutabl_seq[codon_idx] = new_codon
-
-            return True
 
         # iterate across overlapping chunks of complete codons
         codon_window = window_size // 3
         mutable_seq = sequence.tomutable()
-
+        
+        score = 0
+        
         current_cycle = 0  # prevent infinite loops (caused by poly-TRP or poly-MET)
         keep_looping = True
         # `keep_looping` if any mutation is made,
@@ -314,7 +304,7 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
                 # check if all codons in the window are identical
                 if len(set(codons)) == 1:
                     logger.detail("All codons in window are identical: {}".format(codons))
-                    keep_looping = _mutate_and_keep_looping(mutable_seq, window, (i * 3))
+                    score += 1
 
                 # check if the segment is found in the full sequence
                 non_overlapping_matches = re.findall(
@@ -322,11 +312,11 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
                 )
                 if len(non_overlapping_matches) > 1 and len(mutable_seq[window]) > 3:
                     logger.debug("Current window is repeated in the sequence")
-                    keep_looping = _mutate_and_keep_looping(mutable_seq, window, (i * 3))
+                    score += 1
 
             current_cycle += 1
 
-        return mutable_seq.toseq()
+        return score
 
     def _eval_homopolymers(n_codons=2, homopolymer_threshold=4):
         """Identify consecutive stretches of the same nucleotides
@@ -420,62 +410,63 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
             acceptor_sites = _pass_back_matches(_splice_acceptors, curr_dna)
             return set(donor_sites + acceptor_sites)
 
-        mutable_seq = dna_sequence.tomutable()
-        score = 0
-        keep_looping = True
-        n_times_through_unchanged = 0
-        prev_seq = ""
-        while keep_looping:
-            # look for donor and acceptor seqs
-            splice_sites = _get_splice_sites(mutable_seq)
+        for sequence in population:
+            mutable_seq = dna_sequence.tomutable()
+            score = 0
+            keep_looping = True
+            n_times_through_unchanged = 0
+            prev_seq = ""
+            while keep_looping:
+                # look for donor and acceptor seqs
+                splice_sites = _get_splice_sites(mutable_seq)
 
-            logger.info("Removing RNA splice site donors and acceptors.")
-            for site_bounds in splice_sites:
-                site_removed = False
+                logger.info("Removing RNA splice site donors and acceptors.")
+                for site_bounds in splice_sites:
+                    site_removed = False
 
-                codon_list = list(range(site_bounds[0], site_bounds[-1] + 1))
-                random.shuffle(codon_list)
+                    codon_list = list(range(site_bounds[0], site_bounds[-1] + 1))
+                    random.shuffle(codon_list)
 
-                indices = [slice(cdn * 3, (cdn + 1) * 3) for cdn in codon_list]
-                init_codons = [mutable_seq[idx] for idx in indices if str(mutable_seq[idx])]
+                    indices = [slice(cdn * 3, (cdn + 1) * 3) for cdn in codon_list]
+                    init_codons = [mutable_seq[idx] for idx in indices if str(mutable_seq[idx])]
 
-                amino_acids = [
-                    seq3(CodonTable.standard_dna_table.forward_table[str(init)]).upper()
-                    for init in init_codons
-                ]
-                synonymous_codons = [codon_use_table[amino_acid][0] for amino_acid in amino_acids]
-                substitutions = list(product(*synonymous_codons))
-                random.shuffle(substitutions)
+                    amino_acids = [
+                        seq3(CodonTable.standard_dna_table.forward_table[str(init)]).upper()
+                        for init in init_codons
+                    ]
+                    synonymous_codons = [codon_use_table[amino_acid][0] for amino_acid in amino_acids]
+                    substitutions = list(product(*synonymous_codons))
+                    random.shuffle(substitutions)
 
-                for substitution in substitutions:
-                    for idx, codon in zip(indices, substitution):
-                        mutable_seq[idx] = codon
-                        score += 5
-                    curr_sites = _get_splice_sites(mutable_seq)
-                    if site_bounds in curr_sites or len(curr_sites) >= len(splice_sites):
-                        # put the starting sequence back
-                        score -= 5
-                        for idx, init_codon in zip(indices, init_codons):
-                            mutable_seq[idx] = init_codon
-                    else:
-                        site_removed = True
-                        logger.detail("Removed site ({})!".format(site_bounds))
-                        logger.detail(
-                            "Remaining sites:\n" + "\n".join([str(s) for s in curr_sites])
-                        )
+                    for substitution in substitutions:
+                        for idx, codon in zip(indices, substitution):
+                            mutable_seq[idx] = codon
+                            score += 5
+                        curr_sites = _get_splice_sites(mutable_seq)
+                        if site_bounds in curr_sites or len(curr_sites) >= len(splice_sites):
+                            # put the starting sequence back
+                            score -= 5
+                            for idx, init_codon in zip(indices, init_codons):
+                                mutable_seq[idx] = init_codon
+                        else:
+                            site_removed = True
+                            logger.detail("Removed site ({})!".format(site_bounds))
+                            logger.detail(
+                                "Remaining sites:\n" + "\n".join([str(s) for s in curr_sites])
+                            )
+                            break
+
+                    if site_removed:
                         break
 
-                if site_removed:
-                    break
+                remaining_sites = _get_splice_sites(mutable_seq)
+                n_times_through_unchanged += int(str(mutable_seq) == prev_seq)
+                prev_seq = str(mutable_seq)
 
-            remaining_sites = _get_splice_sites(mutable_seq)
-            n_times_through_unchanged += int(str(mutable_seq) == prev_seq)
-            prev_seq = str(mutable_seq)
+                if not len(remaining_sites) or n_times_through_unchanged == 5:
+                    keep_looping = False
 
-            if not len(remaining_sites) or n_times_through_unchanged == 5:
-                keep_looping = False
-
-        return mutable_seq.toseq()
+            population[sequence] += score
 
     def _eval_gc_content(gc):
         """Scan across a sequence and determine a score based on how far it is
@@ -499,47 +490,45 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
             * **low** (`float`) – Minimum GC content in window.
 
             * **high** (`float`) – Maximum GC content in window.
-
-        Returns:
-            Bio.Seq.Seq: A read-only representation of the new DNA sequence.
         """
-        logger.info(
-            "GC content scan -- window_size: {} nucleotides, threshold: {} < x < {}".format(
-                gc.window_size, gc.low, gc.high
+        for sequence in population:
+            logger.info(
+                "GC content scan -- window_size: {} nucleotides, threshold: {} < x < {}".format(
+                    gc.window_size, gc.low, gc.high
+                )
             )
-        )
 
-        window_size = gc.window_size  # tuples are immutable
-        # some windows may be expressed as function of the sequence length
-        if isinstance(window_size, str) and window_size.startswith("x"):
-            window_size = int(float(window_size[1:]) * len(dna_sequence))
+            window_size = gc.window_size  # tuples are immutable
+            # some windows may be expressed as function of the sequence length
+            if isinstance(window_size, str) and window_size.startswith("x"):
+                window_size = int(float(window_size[1:]) * len(sequence))
 
-        # iterate across overlapping chunks of complete codons
-        codon_window = window_size // 3 + 1
-        mutable_seq = dna_sequence.tomutable()
-        score = 0
-        # iterate by codon, but map back to sequence-based indices
-        for i in range(len(mutable_seq) // 3):
-            window = slice(
-                i * 3,
-                (i + codon_window) * 3
-                if (i + codon_window) * 3 < len(mutable_seq)
-                else len(mutable_seq),
-            )
-            logger.debug("Current segment: {}".format(mutable_seq[window]))
+            # iterate across overlapping chunks of complete codons
+            codon_window = window_size // 3 + 1
+            mutable_seq = sequence.tomutable()
+            score = 0
+            # iterate by codon, but map back to sequence-based indices
+            for i in range(len(mutable_seq) // 3):
+                window = slice(
+                    i * 3,
+                    (i + codon_window) * 3
+                    if (i + codon_window) * 3 < len(mutable_seq)
+                    else len(mutable_seq),
+                )
+                logger.debug("Current segment: {}".format(mutable_seq[window]))
 
-            gc_percent = GC(mutable_seq[window]) / 100
+                gc_percent = GC(mutable_seq[window]) / 100
 
-            if gc_percent > gc.high:
-                score += gc_percent - gc.high
-            elif gc_percent < gc.low:
-                score += gc.low - gc_percent
+                if gc_percent > gc.high:
+                    score += gc_percent - gc.high
+                elif gc_percent < gc.low:
+                    score += gc.low - gc_percent
 
-        return score
+            population[sequence] += score
 
     def _eval_hairpins(stem_length=10):
-        """Identify possible hairpins.
-        Then score based on number of possible hairpins
+        """Identify possible hairpins in population.
+        Score based on number of possible hairpins
             Todo: crossbreeding
             Args:
                 stem_length (int, optional): Length of hairpin stem to detect.
@@ -548,30 +537,39 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
             Returns:
                 Score
             """
-        mutable_seq = dna_sequence.tomutable()
-        score = 0
-        for i in range(0, len(mutable_seq), stem_length):
-            stem_seq = mutable_seq[i: i + stem_length].toseq()
-            # include wobble base pairing for G-[CT]
-            hairpin_pattern = "".join(
-                [nt if nt != "C" else "[CT]" for nt in stem_seq.reverse_complement()]
-            )
-            for hairpin in re.finditer(hairpin_pattern, str(mutable_seq)):
-                score += 1
-
-        return score
+        for sequence in population:
+            mutable_seq = sequence.tomutable()
+            score = 0
+            for i in range(0, len(mutable_seq), stem_length):
+                stem_seq = mutable_seq[i: i + stem_length].toseq()
+                # include wobble base pairing for G-[CT]
+                hairpin_pattern = "".join(
+                    [nt if nt != "C" else "[CT]" for nt in stem_seq.reverse_complement()]
+                )
+                for hairpin in re.finditer(hairpin_pattern, str(mutable_seq)):
+                    score += 1
+            population[sequence] += score
 
     def _eval_sequence():
-        fitness_score = _eval_gc_content() + _eval_homopolymers()
-        fitness_score += _eval_host() + _eval_repeats()
-        fitness_score += _eval_restriction_sites() + _eval_splice_sites()
-        fitness_score += + _eval_start_sites() + _eval_hairpins()
-        return fitness_score
+        _eval_gc_content()
+        _eval_homopolymers()
+        _eval_host()
+        _eval_repeats()
+        _eval_restriction_sites()
+        _eval_splice_sites()
+        _eval_start_sites()
+        _eval_hairpins()
 
 
     # Optimize sequence for organism to maximum
+    population = {
+        ancestor_sequence; 0,
+        }
+    _eval_sequence()
 
     # Determine if fitness is good enough
+    if(population[ancestor_sequence]<minimum_fitness):
+        return ancestor_sequence
 
     # If not Generate an initial population of mutants
     population = _generate_initial_population()
@@ -579,12 +577,12 @@ def the_sequence_optimizer(dna_sequence, codon_use_table, minimum_fitness, gener
     # Then, until num_generations exceeded
     generation = 0
     while(generation < generations):
-        for sequence in population:
-            _eval_sequence()
+        _eval_sequence()
+        lowest_score = min(population.items(), key=lambda x: x[1])
     # Check if fitness achieved
     # else find best performers
     # mutate them
     # repeat
     possible_sequence = min(_eval_sequence(population))
     if possible_sequence < minimum_fitness:
-        return
+        return possible_sequence
