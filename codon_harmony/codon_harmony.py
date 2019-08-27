@@ -10,7 +10,7 @@ from Bio.Alphabet import IUPAC
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqUtils import GC
 
-from .util import codon_use, logging, log_levels, seq_opt
+from .util import codon_use, logging, log_levels, seq_opt, seq_opt_ga
 from .data import GC_content, RibosomeBindingSites, RestrictionEnzymes
 from .dict_as_arg import DictAsArg
 
