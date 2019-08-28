@@ -13,10 +13,10 @@ codon_use_table, host_profile, codon_relative_adativeness = codon_use.host_codon
         host, host_threshold, local_host_profile
     )
 minimum_fitness = 0
-generations = 10
+generations = 100
 gc = GC_content[0]
 print(gc)
-num_individuals = 10
+num_individuals = 50
 restriction_sites = RestrictionEnzymes("NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split())
 rbs = RibosomeBindingSites
 print(seq_opt_ga.the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, generations, gc, restriction_sites, rbs,num_individuals))

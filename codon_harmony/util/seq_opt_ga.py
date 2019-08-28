@@ -6,9 +6,8 @@ import math
 import numpy
 import operator
 import sys
-
 from itertools import product
-
+import multiprocessing
 from Bio.Alphabet import IUPAC
 
 from Bio.Data import CodonTable
@@ -156,13 +155,13 @@ def the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, 
 
     weights = {
         'host':0,
-        'repeats':2.5,
-        'rest':10,
-        'splice':1,
-        'start':0.5,
-        'hairpin':2,
-        'gc':5,
-        'homo':1,
+        'repeats':10,
+        'rest':100,
+        'splice':0,
+        'start':0,
+        'hairpin':10,
+        'gc':2,
+        'homo':0,
         }
 
     def _eval_host():
@@ -595,13 +594,20 @@ def the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, 
         ancestor_sequence: sys.maxsize,
         }
     _eval_population()
-    print(population)
+    print('initial score:', population[ancestor_sequence])
     if(population[ancestor_sequence]<minimum_fitness):
         return ancestor_sequence
 
     # If not, generate an initial population of mutants
     population = _generate_initial_population()
-
+    
+    """# Multithread application for speed
+    # split input into chunks no larger than 3 x Ncpu
+    num_workers = min(multiprocessing.cpu_count(), len(population))
+    with multiprocessing.Pool(num_workers) as pool:
+        result = pool.map(_eval_population, population.keys())
+        print(result)
+"""
     # Then, until num_generations exceeded choose best from populations 
     # and mutate until valid sequence achieved.
     generation = 0

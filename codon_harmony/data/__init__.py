@@ -125,6 +125,7 @@ class GCParams(namedtuple("GCParams", "name window_size low high")):
 
 
 GC_content = [
+    GCParams("Custom", 20, 0.15, 0.60),
     GCParams("IDT", 20, 0.15, 0.90),
     GCParams("twist", 50, 0.15, 0.80),
     GCParams("IDT_long", 100, 0.28, 0.68),
