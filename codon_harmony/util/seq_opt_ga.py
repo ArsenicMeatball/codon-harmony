@@ -14,7 +14,7 @@ from Bio.Data import CodonTable
 from Bio.Restriction import Analysis
 from Bio.SeqUtils import CodonUsage, GC, seq3
 
-from . import Seq, MutableSeq, codon_use
+from . import seq, MutableSeq, codon_use
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ def the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, 
         adds number of differences to sequence value.
         """
         for sequence in population:
-            population[sequence]  += sum(weights['host'] for a, b in  zip(sequence, ancestor_sequence) if a != b)
+            population[sequence] += sum(weights['host'] for a, b in zip(sequence, ancestor_sequence) if a != b)
 
     def _eval_restriction_sites(restrict_sites=restriction_sites):
         """Identify sequences with restriction enzymes

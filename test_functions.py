@@ -9,14 +9,14 @@ ancestor_sequence = Seq.Seq("ATGACTGCACTGGCTAGCTGTCATACTTGTAGCACTACTCCTACTCGTCGT
 host = "413997"
 host_threshold = 0.1
 local_host_profile = None
-codon_use_table, host_profile, codon_relative_adativeness = codon_use.host_codon_usage(
+codon_use_table, host_profile, codon_relative_adaptiveness = codon_use.host_codon_usage(
         host, host_threshold, local_host_profile
     )
 minimum_fitness = 0
-generations = 100
+generations = 2
 gc = GC_content[0]
 print(gc)
-num_individuals = 50
+num_individuals = 3
 restriction_sites = RestrictionEnzymes("NdeI XhoI HpaI PstI EcoRV NcoI BamHI".split())
 rbs = RibosomeBindingSites
 print(seq_opt_ga.the_sequence_optimizer(ancestor_sequence, codon_use_table, minimum_fitness, generations, gc, restriction_sites, rbs,num_individuals))
