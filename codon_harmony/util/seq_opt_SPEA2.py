@@ -3,7 +3,7 @@ Initialize population P
 Create empty external set E
 while generations
     compute fitness of all individuals in population and external set
-    copy all individuals evaluating to nondominated vectors in P & E to E
+    copy all individuals evaluating to non- dominated vectors in P & E to E
     Remove elements from E if necessary using truncation
     if E not full, fill with dominated individuals from P
     binary tournament selection with replacement to fill mating pool M
@@ -24,6 +24,7 @@ from Bio.Alphabet import IUPAC
 from Bio.Data import CodonTable
 from Bio.Restriction import Analysis
 from Bio.SeqUtils import CodonUsage, GC, seq3
+from .fitness_functions import eval_host, eval_restriction_sites
 
 from test_functions import codon_use_table
 from . import codon_use, seq, MutableSeq
@@ -32,14 +33,26 @@ max_generations = 2
 
 
 def crossover_and_mutate(parents, probability_crossover, probability_mutation):
-    pass
+    for sequence in parents:
+        mutate_sequence(sequence)
 
 
 def get_parents(archive):
+    """
+    Select the best individuals from the archive
+    :param archive:
+    :return: the selected individuals that will create the next generation
+    """
     pass
 
 
 def truncate_similar_individuals(archive):
+    """
+    Remove individuals from the archive that are too similar
+    Allows diversity in the set of solutions
+    :param archive:
+    :return:
+    """
     pass
 
 
@@ -59,8 +72,16 @@ def calculate_raw_fitness(individual):
     pass
 
 
-def calculate_fitness(individual, problem_size):
-    pass
+def calculate_fitness(population, problem_size):
+    for sequence in population:
+        population[sequence][0] = eval_gc_content(sequence, gc_parameters)
+        population[sequence][1] = eval_homopolymers(sequence)
+        population[sequence][2] = eval_host(sequence, ancestor_sequence)
+        population[sequence][3] = eval_repeats(sequence)
+        population[sequence][4] = eval_restriction_sites(sequence, restriction_sites)
+        population[sequence][5] = eval_splice_sites(sequence)
+        population[sequence][6] = eval_start_sites(sequence)
+        population[sequence][7] = eval_hairpins(sequence)
 
 
 def initialize_population(population_size, problem_size, ancestor_sequence, probability_mutation):
@@ -127,8 +148,7 @@ def optimize_strength_pareto_evolutionary_algorithm(population_size, archive_siz
     population = initialize_population(population_size, problem_size, ancestor_sequence, probability_mutation)
     archive = []
     for generation in range(0, max_generations):
-        for individual in population:
-            calculate_fitness(individual, problem_size)
+        calculate_fitness(population, problem_size)
         union = population + archive
         for individual in union:
             calculate_raw_fitness(individual)

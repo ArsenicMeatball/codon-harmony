@@ -13,7 +13,6 @@ from Bio.Alphabet import IUPAC
 from Bio.Data import CodonTable
 from Bio.Restriction import Analysis
 from Bio.SeqUtils import CodonUsage, GC, seq3
-
 from . import seq, MutableSeq, codon_use
 
 logger = logging.getLogger(__name__)
